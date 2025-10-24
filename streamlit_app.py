@@ -503,13 +503,18 @@ if mode == "Dashboard":
                 "Player A", "Player B", "Combo Type", "Total Entries",
                 "Elite_1%", "Elite_0.5%", "Elite_0.1%",
                 "Top 1% Rate", "Top 0.5% Rate", "Top 0.1% Rate"
-            ]].sort_values("Top 1% Rate", ascending=False)
-            
+            ]]
+
+            min_combo_entries = st.slider("Minimum Combo Drafts", 0, int(summary["Total Entries"].max()), 0)
+            summary = summary[summary["Total Entries"] >= min_combo_entries]
+            summary = summary.sort_values("Top 1% Rate", ascending=False)
+
             st.dataframe(summary.style.format({
                 "Top 1% Rate": "{:.2%}",
                 "Top 0.5% Rate": "{:.2%}",
                 "Top 0.1% Rate": "{:.2%}"
             }))
+
             
                             
             
