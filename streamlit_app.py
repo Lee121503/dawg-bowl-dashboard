@@ -222,6 +222,7 @@ if mode == "Dashboard":
         # 🔹 Dropdown filters
         tier_option = st.selectbox("Heatmap Percentile Tier", ["All Entries", "Top 1%", "Top 0.5%", "Top 0.1%"])
         week_option = st.selectbox("Heatmap Week Filter", ["All Weeks"] + sorted(entries_df["Week"].unique()))
+        heatmap_user = st.text_input("Heatmap Username Filter (optional)")
 
         # 🔹 Apply filters
         heatmap_df = entries_df.copy()
@@ -235,6 +236,9 @@ if mode == "Dashboard":
             heatmap_df = heatmap_df[heatmap_df["Top_0.5%"]]
         elif tier_option == "Top 0.1%":
             heatmap_df = heatmap_df[heatmap_df["Top_0.1%"]]
+
+        if heatmap_user:
+            heatmap_df = heatmap_df[heatmap_df["username"].str.lower() == heatmap_user.lower()]
 
         # 🔹 Melt and count
         melted = heatmap_df.melt(
