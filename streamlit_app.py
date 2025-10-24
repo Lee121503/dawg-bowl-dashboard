@@ -94,45 +94,45 @@ if mode == "Dashboard":
         min_entries = st.sidebar.slider("Minimum Entries", 0, int(entries_df["Total Entries"].max()), 0)
         sort_mode = st.sidebar.radio("Sort by", ["Elite Finish Count", "Elite Finish Rate"])
 
-# 🔹 Overall User Summary
-st.header("📊 User-Level Elite Finish Dashboard")
+        # 🔹 Overall User Summary
+        st.header("📊 User-Level Elite Finish Dashboard")
 
-user_summary = (
-    filtered_df.groupby("username")[["Top_0.1%", "Top_0.5%", "Top_1%"]]
-    .sum()
-    .astype(int)
-    .join(filtered_df["username"].value_counts().rename("Total Entries"))
-    .reset_index()
-    .rename(columns={"index": "username"})
-)
+        user_summary = (
+            filtered_df.groupby("username")[["Top_0.1%", "Top_0.5%", "Top_1%"]]
+            .sum()
+            .astype(int)
+            .join(filtered_df["username"].value_counts().rename("Total Entries"))
+            .reset_index()
+            .rename(columns={"index": "username"})
+        )
 
-# 🔹 Add rate columns
-user_summary["Top 0.1% Rate"] = user_summary["Top_0.1%"] / user_summary["Total Entries"]
-user_summary["Top 0.5% Rate"] = user_summary["Top_0.5%"] / user_summary["Total Entries"]
-user_summary["Top 1% Rate"] = user_summary["Top_1%"] / user_summary["Total Entries"]
+        # 🔹 Add rate columns
+        user_summary["Top 0.1% Rate"] = user_summary["Top_0.1%"] / user_summary["Total Entries"]
+        user_summary["Top 0.5% Rate"] = user_summary["Top_0.5%"] / user_summary["Total Entries"]
+        user_summary["Top 1% Rate"] = user_summary["Top_1%"] / user_summary["Total Entries"]
 
-# 🔹 Apply filters
-filtered = user_summary[user_summary["Total Entries"] >= min_entries]
-if selected_user:
-    filtered = filtered[filtered["username"].str.lower() == selected_user.lower()]
+        # 🔹 Apply filters
+        filtered = user_summary[user_summary["Total Entries"] >= min_entries]
+        if selected_user:
+            filtered = filtered[filtered["username"].str.lower() == selected_user.lower()]
 
-# 🔹 Display with formatting
-if sort_mode == "Elite Finish Count":
-    sort_cols = ["Top_0.1%", "Top_0.5%", "Top_1%"]
-else:
-    sort_cols = ["Top 0.1% Rate", "Top 0.5% Rate", "Top 1% Rate"]
+        # 🔹 Display with formatting
+        if sort_mode == "Elite Finish Count":
+            sort_cols = ["Top_0.1%", "Top_0.5%", "Top_1%"]
+        else:
+            sort_cols = ["Top 0.1% Rate", "Top 0.5% Rate", "Top 1% Rate"]
 
-st.dataframe(
-    filtered.sort_values(by=sort_cols, ascending=False)
-    .style.format({
-        "Top 0.1% Rate": "{:.2%}",
-        "Top 0.5% Rate": "{:.2%}",
-        "Top 1% Rate": "{:.2%}"
-    })
-)
+        st.dataframe(
+            filtered.sort_values(by=sort_cols, ascending=False)
+            .style.format({
+                "Top 0.1% Rate": "{:.2%}",
+                "Top 0.5% Rate": "{:.2%}",
+                "Top 1% Rate": "{:.2%}"
+            })
+        )
 
-# 🔹 Export Button
-st.download_button("📤 Export Filtered Table", filtered.to_csv(index=False), "filtered_user_summary.csv")
+        # 🔹 Export Button
+        st.download_button("📤 Export Filtered Table", filtered.to_csv(index=False), "filtered_user_summary.csv")
 
 # 🔹 Weekly Draft Charts
 st.header("🎛️ Weekly Draft Position Charts")
