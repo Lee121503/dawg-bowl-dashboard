@@ -170,75 +170,75 @@ if mode == "Dashboard":
         plot_tier("Top_0.5%")
         plot_tier("Top_1%")
 
-# 🔹 Individual User Breakdown
-st.header("🔍 Individual User Draft Breakdown")
-user_input = st.text_input("Enter username for breakdown")
-if user_input:
-    user_df = entries_df[entries_df["username"].str.lower() == user_input.lower()]
-    if not user_df.empty:
-        st.subheader(f"📋 Summary for {user_input}")
-        st.write(f"Total Entries: {len(user_df)}")
-        st.write(f"Average Points: {user_df['points'].mean():.2f}")
-        st.write(f"Top 0.1% Finishes: {user_df['Top_0.1%'].sum()}")
-        st.write(f"Top 0.5% Finishes: {user_df['Top_0.5%'].sum()}")
-        st.write(f"Top 1% Finishes: {user_df['Top_1%'].sum()}")
-        st.dataframe(user_df[[
-            "Week", "place", "points",
-            "QB Pick", "RB1 Pick", "WR1 Pick", "WR2 Pick", "TE Pick", "Flex Pick"
-        ]].sort_values(by=["Week", "place"]))
-    else:
-        st.warning("No entries found for that username.")
+        # 🔹 Individual User Breakdown
+        st.header("🔍 Individual User Draft Breakdown")
+        user_input = st.text_input("Enter username for breakdown")
+        if user_input:
+            user_df = entries_df[entries_df["username"].str.lower() == user_input.lower()]
+            if not user_df.empty:
+                st.subheader(f"📋 Summary for {user_input}")
+                st.write(f"Total Entries: {len(user_df)}")
+                st.write(f"Average Points: {user_df['points'].mean():.2f}")
+                st.write(f"Top 0.1% Finishes: {user_df['Top_0.1%'].sum()}")
+                st.write(f"Top 0.5% Finishes: {user_df['Top_0.5%'].sum()}")
+                st.write(f"Top 1% Finishes: {user_df['Top_1%'].sum()}")
+                st.dataframe(user_df[[
+                    "Week", "place", "points",
+                    "QB Pick", "RB1 Pick", "WR1 Pick", "WR2 Pick", "TE Pick", "Flex Pick"
+                ]].sort_values(by=["Week", "place"]))
+            else:
+                st.warning("No entries found for that username.")
 
-# 🔹 Trait Scanner Function
-def run_trait_scanner(uploaded_files):
-    st.title("🏆 Top 1% Draft Trait Scanner (By Week)")
+        # 🔹 Trait Scanner Function
+        def run_trait_scanner(uploaded_files):
+            st.title("🏆 Top 1% Draft Trait Scanner (By Week)")
 
-    if not uploaded_files:
-        st.info("📥 Please upload contest CSVs in the Dashboard tab first.")
-        return
+            if not uploaded_files:
+                st.info("📥 Please upload contest CSVs in the Dashboard tab first.")
+                return
 
-    for file in uploaded_files:
-        try:
-            df = pd.read_csv(file)
-            week_label = file.name.split("_Week_")[1].split("_")[0]
-        except Exception as e:
-            st.error(f"Error reading {file.name}: {e}")
-            continue
+            for file in uploaded_files:
+                try:
+                    df = pd.read_csv(file)
+                    week_label = file.name.split("_Week_")[1].split("_")[0]
+                except Exception as e:
+                    st.error(f"Error reading {file.name}: {e}")
+                    continue
 
-        total_entries = len(df)
-        top_cutoff = max(1, int(total_entries * 0.01))
-        top_df = df.nsmallest(top_cutoff, "place")
+                total_entries = len(df)
+                top_cutoff = max(1, int(total_entries * 0.01))
+                top_df = df.nsmallest(top_cutoff, "place")
 
-        st.subheader(f"📅 Week {week_label}")
-        st.markdown(f"**Total Entries:** {total_entries}  \n**Top 1% Cutoff:** Top {top_cutoff} entries")
+                st.subheader(f"📅 Week {week_label}")
+                st.markdown(f"**Total Entries:** {total_entries}  \n**Top 1% Cutoff:** Top {top_cutoff} entries")
 
-        all_players = pd.melt(
-            df,
-            id_vars=["place"],
-            value_vars=[f"Player {i}" for i in range(1, 7)],
-            var_name="Slot",
-            value_name="Player"
-        )
-        top_players = pd.melt(
-            top_df,
-            id_vars=["place"],
-            value_vars=[f"Player {i}" for i in range(1, 7)],
-            var_name="Slot",
-            value_name="Player"
-        )
+                all_players = pd.melt(
+                    df,
+                    id_vars=["place"],
+                    value_vars=[f"Player {i}" for i in range(1, 7)],
+                    var_name="Slot",
+                    value_name="Player"
+                )
+                top_players = pd.melt(
+                    top_df,
+                    id_vars=["place"],
+                    value_vars=[f"Player {i}" for i in range(1, 7)],
+                    var_name="Slot",
+                    value_name="Player"
+                )
 
-        player_counts = all_players["Player"].value_counts().rename("All Entries")
-        top_counts = top_players["Player"].value_counts().rename("Top 1%")
+                player_counts = all_players["Player"].value_counts().rename("All Entries")
+                top_counts = top_players["Player"].value_counts().rename("Top 1%")
+        
+                trait_df = pd.concat([top_counts, player_counts], axis=1).fillna(0)
+                trait_df["Elite Hit Rate (%)"] = (trait_df["Top 1%"] / trait_df["All Entries"]) * 100
+                trait_df = trait_df.sort_values("Elite Hit Rate (%)", ascending=False)
+        
+                st.dataframe(trait_df.style.format({"Elite Hit Rate (%)": "{:.2f}"}))
+        
+            st.subheader("🔗 High-Impact Player Combos (Coming Soon)")
+            st.markdown("Want to detect elite stacks or synergistic pairings? I’ll help you build that next.")
 
-        trait_df = pd.concat([top_counts, player_counts], axis=1).fillna(0)
-        trait_df["Elite Hit Rate (%)"] = (trait_df["Top 1%"] / trait_df["All Entries"]) * 100
-        trait_df = trait_df.sort_values("Elite Hit Rate (%)", ascending=False)
-
-        st.dataframe(trait_df.style.format({"Elite Hit Rate (%)": "{:.2f}"}))
-
-    st.subheader("🔗 High-Impact Player Combos (Coming Soon)")
-    st.markdown("Want to detect elite stacks or synergistic pairings? I’ll help you build that next.")
-
-# 🔹 Trait Scanner Mode Trigger
-if mode == "Elite Trait Scanner":
-    run_trait_scanner(uploaded_weeks)
+        # 🔹 Trait Scanner Mode Trigger
+        if mode == "Elite Trait Scanner":
+            run_trait_scanner(uploaded_weeks)
