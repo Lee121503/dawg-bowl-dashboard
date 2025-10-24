@@ -217,15 +217,14 @@ if mode == "Dashboard":
             ax.set_title(f"{tier_option} — {week_option} Draft Position Frequency")
             st.pyplot(fig)
         
-        # 🧠 TAB 3: Round 1 Anchor Analysis
         with tab3:
             st.header("🧠 Round 1 Anchor Analysis")
-        
+
             anchor_pos = st.selectbox("Select Round 1 Anchor Position", ["RB", "WR", "QB", "TE"])
             tier_filter = st.selectbox("Percentile Tier", ["All Entries", "Top 1%", "Top 0.5%", "Top 0.1%"])
             week_filter = st.selectbox("Week Filter", ["All Weeks"] + sorted(entries_df["Week"].unique()))
             user_filter = st.text_input("Username Filter (optional)")
-        
+
             anchor_df = entries_df.copy()
             if week_filter != "All Weeks":
                 anchor_df = anchor_df[anchor_df["Week"] == week_filter]
@@ -255,11 +254,19 @@ if mode == "Dashboard":
                 .fillna(0)
             )
 
+            # 🔄 Convert to percentages
+            round_percentages = round_counts.div(round_counts.sum(axis=1), axis=0) * 100
+
+            # 📊 Plot with labels
             fig, ax = plt.subplots(figsize=(10, 6))
-            round_counts.plot(kind="bar", stacked=True, ax=ax)
+            bars = round_percentages.plot(kind="bar", stacked=True, ax=ax, colormap="tab20")
+        
+            for container in ax.containers:
+                ax.bar_label(container, fmt="%.1f%%", label_type="center", fontsize=8)
+        
             ax.set_title(f"Draft Flow After Round 1 {anchor_pos} — {tier_filter} — {week_filter}")
             ax.set_xlabel("Draft Round")
-            ax.set_ylabel("Count")
+            ax.set_ylabel("Percentage of Teams")
             ax.grid(axis="y")
             st.pyplot(fig)
-                
+        
