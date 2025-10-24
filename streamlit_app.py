@@ -411,8 +411,8 @@ if mode == "Dashboard":
         with tab7:
             st.header("🧠 Stacking Combinations: QB + Teammates vs Mini Stacks")
 
-            stack_week = st.selectbox("Stack Week Filter", ["All Weeks"] + sorted(entries_df["Week"].unique()))
-            stack_tier = st.selectbox("Stack Percentile Tier", ["Top 1%", "Top 0.5%", "Top 0.1%"])
+            stack_week = st.selectbox("Stack Combo Week Filter", ["All Weeks"] + sorted(entries_df["Week"].unique()))
+            stack_tier = st.selectbox("Stack Combo Percentile Tier", ["Top 1%", "Top 0.5%", "Top 0.1%"])
 
             df = entries_df.copy()
             if stack_week != "All Weeks":
