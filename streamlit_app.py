@@ -159,7 +159,7 @@ if mode == "Dashboard":
             else:
                 st.warning("No entries found for that username.")
         elif mode == "Elite Trait Scanner":
-    run_trait_scanner()
+            run_trait_scanner()
 
 def run_trait_scanner():
     st.title("🏆 Top 1% Draft Trait Scanner")
