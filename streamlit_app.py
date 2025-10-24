@@ -316,7 +316,7 @@ if mode == "Dashboard":
             st.header("🏅 Player-Level Elite Finish Rates")
 
             round_filter = st.selectbox("Filter by Draft Round", ["All Rounds"] + [f"Player {i}" for i in range(1, 7)])
-            tier_filter = st.selectbox("Percentile Tier", ["All Entries", "Top 1%", "Top 0.5%", "Top 0.1%"])
+            tier_filter = st.selectbox("Player Percentile Tier", ["All Entries", "Top 1%", "Top 0.5%", "Top 0.1%"])
             week_filter = st.selectbox("Week Filter", ["All Weeks"] + sorted(entries_df["Week"].unique()))
 
             player_df = entries_df.copy()
