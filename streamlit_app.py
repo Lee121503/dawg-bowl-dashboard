@@ -24,6 +24,15 @@ if mode == "Dashboard":
             df["Week"] = f"Week {week_label}"
             all_weeks.append(df)
         entries_df = pd.concat(all_weeks, ignore_index=True)
+# 🔹 Week Filter Setup
+week_options = ["All Weeks"] + sorted(entries_df["Week"].unique())
+selected_week = st.sidebar.selectbox("Filter by Week", week_options)
+
+# 🔹 Apply Week Filter
+filtered_df = entries_df.copy()
+if selected_week != "All Weeks":
+    filtered_df = filtered_df[filtered_df["Week"] == selected_week]
+
 
         # 🔹 Load Position List
         position_df = pd.read_excel(uploaded_positions)
@@ -85,19 +94,24 @@ if mode == "Dashboard":
         st.sidebar.header("🔍 Filter Users")
         selected_user = st.sidebar.text_input("Username (optional)")
         min_entries = st.sidebar.slider("Minimum Entries", 0, int(entries_df["Total Entries"].max()), 0)
+        sort_mode = st.sidebar.radio(
+            "Sort by",
+            ["Elite Finish Count", "Elite Finish Rate"]
+        )
+
 
         # 🔹 Overall User Summary
         st.header("📊 User-Level Elite Finish Dashboard")
 
         user_summary = (
-            entries_df.groupby("username")[["Top_0.1%", "Top_0.5%", "Top_1%"]]
+            filtered_df.groupby("username")[["Top_0.1%", "Top_0.5%", "Top_1%"]]
             .sum()
             .astype(int)
-            .join(entries_df["username"].value_counts().rename("Total Entries"))
+            .join(filtered_df["username"].value_counts().rename("Total Entries"))
             .reset_index()
             .rename(columns={"index": "username"})
         )
-
+        
         # 🔹 Add rate columns
         user_summary["Top 0.1% Rate"] = user_summary["Top_0.1%"] / user_summary["Total Entries"]
         user_summary["Top 0.5% Rate"] = user_summary["Top_0.5%"] / user_summary["Total Entries"]
@@ -109,15 +123,19 @@ if mode == "Dashboard":
             filtered = filtered[filtered["username"].str.lower() == selected_user.lower()]
 
         # 🔹 Display with formatting
+        if sort_mode == "Elite Finish Count":
+            sort_cols = ["Top_0.1%", "Top_0.5%", "Top_1%"]
+        else:
+            sort_cols = ["Top 0.1% Rate", "Top 0.5% Rate", "Top 1% Rate"]
+
         st.dataframe(
-            filtered.sort_values(by=["Top_0.1%", "Top_0.5%", "Top_1%"], ascending=False)
+            filtered.sort_values(by=sort_cols, ascending=False)
             .style.format({
                 "Top 0.1% Rate": "{:.2%}",
                 "Top 0.5% Rate": "{:.2%}",
                 "Top 1% Rate": "{:.2%}"
             })
         )
-
 
         # 🔹 Export Button
         st.download_button("📤 Export Filtered Table", filtered.to_csv(index=False), "filtered_user_summary.csv")
