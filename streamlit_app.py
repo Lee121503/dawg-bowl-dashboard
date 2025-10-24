@@ -275,8 +275,8 @@ if mode == "Dashboard":
         with tab4:
             st.header("🔗 High-Impact Player Combos")
 
-            week_combo = st.selectbox("Week Filter", ["All Weeks"] + sorted(entries_df["Week"].unique()))
-            tier_combo = st.selectbox("Percentile Tier", ["Top 1%", "Top 0.5%", "Top 0.1%"])
+            week_combo = st.selectbox("Combo Week Filter", ["All Weeks"] + sorted(entries_df["Week"].unique()))
+            tier_combo = st.selectbox("Combo Percentile Tier", ["Top 1%", "Top 0.5%", "Top 0.1%"])
 
             combo_df = entries_df.copy()
             if week_combo != "All Weeks":
