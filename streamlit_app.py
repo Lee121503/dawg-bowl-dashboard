@@ -88,6 +88,7 @@ if mode == "Dashboard":
 
         # 🔹 Overall User Summary
         st.header("📊 User-Level Elite Finish Dashboard")
+
         user_summary = (
             entries_df.groupby("username")[["Top_0.1%", "Top_0.5%", "Top_1%"]]
             .sum()
@@ -96,10 +97,27 @@ if mode == "Dashboard":
             .reset_index()
             .rename(columns={"index": "username"})
         )
+
+        # 🔹 Add rate columns
+        user_summary["Top 0.1% Rate"] = user_summary["Top_0.1%"] / user_summary["Total Entries"]
+        user_summary["Top 0.5% Rate"] = user_summary["Top_0.5%"] / user_summary["Total Entries"]
+        user_summary["Top 1% Rate"] = user_summary["Top_1%"] / user_summary["Total Entries"]
+
+        # 🔹 Apply filters
         filtered = user_summary[user_summary["Total Entries"] >= min_entries]
         if selected_user:
             filtered = filtered[filtered["username"].str.lower() == selected_user.lower()]
-        st.dataframe(filtered.sort_values(by=["Top_0.1%", "Top_0.5%", "Top_1%"], ascending=False))
+
+        # 🔹 Display with formatting
+        st.dataframe(
+            filtered.sort_values(by=["Top_0.1%", "Top_0.5%", "Top_1%"], ascending=False)
+            .style.format({
+                "Top 0.1% Rate": "{:.2%}",
+                "Top 0.5% Rate": "{:.2%}",
+                "Top 1% Rate": "{:.2%}"
+            })
+        )
+
 
         # 🔹 Export Button
         st.download_button("📤 Export Filtered Table", filtered.to_csv(index=False), "filtered_user_summary.csv")
