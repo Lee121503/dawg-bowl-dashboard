@@ -12,9 +12,7 @@ st.sidebar.header("📥 Upload Contest Files")
 uploaded_weeks = st.sidebar.file_uploader("Upload weekly CSVs", type="csv", accept_multiple_files=True)
 uploaded_positions = st.sidebar.file_uploader("Upload Position List Excel", type=["xls", "xlsx"])
 
-# 🔹 Dashboard Mode
 if mode == "Dashboard":
-
     if uploaded_weeks and uploaded_positions:
         # 🔹 Load Contest Entries
         all_weeks = []
@@ -24,15 +22,6 @@ if mode == "Dashboard":
             df["Week"] = f"Week {week_label}"
             all_weeks.append(df)
         entries_df = pd.concat(all_weeks, ignore_index=True)
-        # 🔹 Week Filter Setup
-        week_options = ["All Weeks"] + sorted(entries_df["Week"].unique())
-        selected_week = st.sidebar.selectbox("Filter by Week", week_options)
-
-        # 🔹 Apply Week Filter
-        filtered_df = entries_df.copy()
-        if selected_week != "All Weeks":
-            filtered_df = filtered_df[filtered_df["Week"] == selected_week]
-
 
         # 🔹 Load Position List
         position_df = pd.read_excel(uploaded_positions)
@@ -90,111 +79,117 @@ if mode == "Dashboard":
 
         entries_df = tag_percentile_tiers(entries_df)
 
-        # 🔹 Sidebar Filters
-        st.sidebar.header("🔍 Filter Users")
-        selected_user = st.sidebar.text_input("Username (optional)")
-        min_entries = st.sidebar.slider("Minimum Entries", 0, int(entries_df["Total Entries"].max()), 0)
-        sort_mode = st.sidebar.radio(
-            "Sort by",
-            ["Elite Finish Count", "Elite Finish Rate"]
-        )
-
-
-        # 🔹 Overall User Summary
-        st.header("📊 User-Level Elite Finish Dashboard")
-
-        user_summary = (
-            filtered_df.groupby("username")[["Top_0.1%", "Top_0.5%", "Top_1%"]]
-            .sum()
-            .astype(int)
-            .join(filtered_df["username"].value_counts().rename("Total Entries"))
-            .reset_index()
-            .rename(columns={"index": "username"})
-        )
-        
-        # 🔹 Add rate columns
-        user_summary["Top 0.1% Rate"] = user_summary["Top_0.1%"] / user_summary["Total Entries"]
-        user_summary["Top 0.5% Rate"] = user_summary["Top_0.5%"] / user_summary["Total Entries"]
-        user_summary["Top 1% Rate"] = user_summary["Top_1%"] / user_summary["Total Entries"]
-
-        # 🔹 Apply filters
-        filtered = user_summary[user_summary["Total Entries"] >= min_entries]
-        if selected_user:
-            filtered = filtered[filtered["username"].str.lower() == selected_user.lower()]
-
-        # 🔹 Display with formatting
-        if sort_mode == "Elite Finish Count":
-            sort_cols = ["Top_0.1%", "Top_0.5%", "Top_1%"]
-        else:
-            sort_cols = ["Top 0.1% Rate", "Top 0.5% Rate", "Top 1% Rate"]
-
-        st.dataframe(
-            filtered.sort_values(by=sort_cols, ascending=False)
-            .style.format({
-                "Top 0.1% Rate": "{:.2%}",
-                "Top 0.5% Rate": "{:.2%}",
-                "Top 1% Rate": "{:.2%}"
-            })
-        )
-
-        # 🔹 Export Button
-        st.download_button("📤 Export Filtered Table", filtered.to_csv(index=False), "filtered_user_summary.csv")
-
-        # 🔹 Weekly Draft Charts
-        st.header("🎛️ Weekly Draft Position Charts")
+        # 🔹 Week Filter Setup
         week_options = ["All Weeks"] + sorted(entries_df["Week"].unique())
-        selected_week = st.selectbox("Select Week", week_options)
+        selected_week = st.sidebar.selectbox("Filter by Week", week_options)
 
-        if selected_week == "All Weeks":
-            week_df = entries_df.copy()
-            title_prefix = "All Weeks"
-        else:
-            week_df = entries_df[entries_df["Week"] == selected_week].copy()
-            title_prefix = selected_week
+        # 🔹 Apply Week Filter
+        filtered_df = entries_df.copy()
+        if selected_week != "All Weeks":
+            filtered_df = filtered_df[filtered_df["Week"] == selected_week]
 
-        melted = week_df.melt(
-            id_vars=["place", "Top_0.1%", "Top_0.5%", "Top_1%"],
-            value_vars=[f"Pos {i}" for i in range(1, 7)],
-            var_name="Round",
-            value_name="Position"
-        )
-        melted["Round"] = melted["Round"].str.extract(r"(\d)").astype(int)
+# 🔹 Sidebar Filters
+st.sidebar.header("🔍 Filter Users")
+selected_user = st.sidebar.text_input("Username (optional)")
+min_entries = st.sidebar.slider("Minimum Entries", 0, int(entries_df["Total Entries"].max()), 0)
+sort_mode = st.sidebar.radio("Sort by", ["Elite Finish Count", "Elite Finish Rate"])
 
-        def plot_tier(tier_label):
-            tier_df = melted[melted[tier_label]]
-            count_df = tier_df.groupby(["Round", "Position"]).size().reset_index(name="Count")
-            pivot_df = count_df.pivot(index="Round", columns="Position", values="Count").fillna(0)
-            fig, ax = plt.subplots(figsize=(10, 6))
-            pivot_df.plot(kind="bar", stacked=False, ax=ax)
-            ax.set_title(f"{title_prefix} — {tier_label} Draft Position Frequency")
-            ax.set_xlabel("Draft Round")
-            ax.set_ylabel("Count")
-            ax.grid(axis="y")
-            st.pyplot(fig)
+# 🔹 Overall User Summary
+st.header("📊 User-Level Elite Finish Dashboard")
 
-        plot_tier("Top_0.1%")
-        plot_tier("Top_0.5%")
-        plot_tier("Top_1%")
+user_summary = (
+    filtered_df.groupby("username")[["Top_0.1%", "Top_0.5%", "Top_1%"]]
+    .sum()
+    .astype(int)
+    .join(filtered_df["username"].value_counts().rename("Total Entries"))
+    .reset_index()
+    .rename(columns={"index": "username"})
+)
 
-        # 🔹 Individual User Breakdown
-        st.header("🔍 Individual User Draft Breakdown")
-        user_input = st.text_input("Enter username for breakdown")
-        if user_input:
-            user_df = entries_df[entries_df["username"].str.lower() == user_input.lower()]
-            if not user_df.empty:
-                st.subheader(f"📋 Summary for {user_input}")
-                st.write(f"Total Entries: {len(user_df)}")
-                st.write(f"Average Points: {user_df['points'].mean():.2f}")
-                st.write(f"Top 0.1% Finishes: {user_df['Top_0.1%'].sum()}")
-                st.write(f"Top 0.5% Finishes: {user_df['Top_0.5%'].sum()}")
-                st.write(f"Top 1% Finishes: {user_df['Top_1%'].sum()}")
-                st.dataframe(user_df[[
-                    "Week", "place", "points",
-                    "QB Pick", "RB1 Pick", "WR1 Pick", "WR2 Pick", "TE Pick", "Flex Pick"
-                ]].sort_values(by=["Week", "place"]))
-            else:
-                st.warning("No entries found for that username.")
+# 🔹 Add rate columns
+user_summary["Top 0.1% Rate"] = user_summary["Top_0.1%"] / user_summary["Total Entries"]
+user_summary["Top 0.5% Rate"] = user_summary["Top_0.5%"] / user_summary["Total Entries"]
+user_summary["Top 1% Rate"] = user_summary["Top_1%"] / user_summary["Total Entries"]
 
+# 🔹 Apply filters
+filtered = user_summary[user_summary["Total Entries"] >= min_entries]
+if selected_user:
+    filtered = filtered[filtered["username"].str.lower() == selected_user.lower()]
+
+# 🔹 Display with formatting
+if sort_mode == "Elite Finish Count":
+    sort_cols = ["Top_0.1%", "Top_0.5%", "Top_1%"]
+else:
+    sort_cols = ["Top 0.1% Rate", "Top 0.5% Rate", "Top 1% Rate"]
+
+st.dataframe(
+    filtered.sort_values(by=sort_cols, ascending=False)
+    .style.format({
+        "Top 0.1% Rate": "{:.2%}",
+        "Top 0.5% Rate": "{:.2%}",
+        "Top 1% Rate": "{:.2%}"
+    })
+)
+
+# 🔹 Export Button
+st.download_button("📤 Export Filtered Table", filtered.to_csv(index=False), "filtered_user_summary.csv")
+
+# 🔹 Weekly Draft Charts
+st.header("🎛️ Weekly Draft Position Charts")
+week_options = ["All Weeks"] + sorted(entries_df["Week"].unique())
+selected_week = st.selectbox("Select Week", week_options)
+
+if selected_week == "All Weeks":
+    week_df = entries_df.copy()
+    title_prefix = "All Weeks"
+else:
+    week_df = entries_df[entries_df["Week"] == selected_week].copy()
+    title_prefix = selected_week
+
+melted = week_df.melt(
+    id_vars=["place", "Top_0.1%", "Top_0.5%", "Top_1%"],
+    value_vars=[f"Pos {i}" for i in range(1, 7)],
+    var_name="Round",
+    value_name="Position"
+)
+melted["Round"] = melted["Round"].str.extract(r"(\d)").astype(int)
+
+def plot_tier(tier_label):
+    tier_df = melted[melted[tier_label]]
+    count_df = tier_df.groupby(["Round", "Position"]).size().reset_index(name="Count")
+    pivot_df = count_df.pivot(index="Round", columns="Position", values="Count").fillna(0)
+    fig, ax = plt.subplots(figsize=(10, 6))
+    pivot_df.plot(kind="bar", stacked=False, ax=ax)
+    ax.set_title(f"{title_prefix} — {tier_label} Draft Position Frequency")
+    ax.set_xlabel("Draft Round")
+    ax.set_ylabel("Count")
+    ax.grid(axis="y")
+    st.pyplot(fig)
+
+plot_tier("Top_0.1%")
+plot_tier("Top_0.5%")
+plot_tier("Top_1%")
+
+# 🔹 Individual User Breakdown
+st.header("🔍 Individual User Draft Breakdown")
+user_input = st.text_input("Enter username for breakdown")
+if user_input:
+    user_df = entries_df[entries_df["username"].str.lower() == user_input.lower()]
+    if not user_df.empty:
+        st.subheader(f"📋 Summary for {user_input}")
+        st.write(f"Total Entries: {len(user_df)}")
+        st.write(f"Average Points: {user_df['points'].mean():.2f}")
+        st.write(f"Top 0.1% Finishes: {user_df['Top_0.1%'].sum()}")
+        st.write(f"Top 0.5% Finishes: {user_df['Top_0.5%'].sum()}")
+        st.write(f"Top 1% Finishes: {user_df['Top_1%'].sum()}")
+        st.dataframe(user_df[[
+            "Week", "place", "points",
+            "QB Pick", "RB1 Pick", "WR1 Pick", "WR2 Pick", "TE Pick", "Flex Pick"
+        ]].sort_values(by=["Week", "place"]))
+    else:
+        st.warning("No entries found for that username.")
+
+# 🔹 Trait Scanner Function
 def run_trait_scanner(uploaded_files):
     st.title("🏆 Top 1% Draft Trait Scanner (By Week)")
 
@@ -243,7 +238,6 @@ def run_trait_scanner(uploaded_files):
 
     st.subheader("🔗 High-Impact Player Combos (Coming Soon)")
     st.markdown("Want to detect elite stacks or synergistic pairings? I’ll help you build that next.")
-
 
 # 🔹 Trait Scanner Mode Trigger
 if mode == "Elite Trait Scanner":
