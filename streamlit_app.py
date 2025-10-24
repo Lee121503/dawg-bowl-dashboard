@@ -87,11 +87,14 @@ if mode == "Dashboard":
 
         position_df = pd.read_excel(uploaded_positions)
         position_map = dict(zip(position_df["Name"], position_df["Position"]))
+        team_map = dict(zip(position_df["Name"], position_df["Team"]))
 
         for i in range(1, 7):
             col = f"Player {i}"
             pos_col = f"Pos {i}"
+            team_col = f"Team {i}"
             entries_df[pos_col] = entries_df[col].map(position_map).fillna("Unknown")
+            entries_df[team_col] = entries_df[col].map(team_map).fillna("Unknown")
 
         def assign_roles(row):
             roles = {"QB Pick": None, "RB1 Pick": None, "WR1 Pick": None, "WR2 Pick": None, "TE Pick": None, "Flex Pick": None}
@@ -133,7 +136,7 @@ if mode == "Dashboard":
         entries_df = tag_percentile_tiers(entries_df)
 
         # 🔹 Tabs
-        tab1, tab2, tab3, tab4, tab5 = st.tabs(["📊 Dashboard", "🔥 Heatmap", "🧠 Round 1 Anchor Analysis", "🔗 Player Combos", "🏅 Player Elite Rates"])
+        tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs(["📊 Dashboard", "🔥 Heatmap", "🧠 Round 1 Anchor Analysis", "🔗 Player Combos", "🏅 Player Elite Rates", "🧱 Stacking Analysis"])
 
         # 📊 TAB 1: User-Level Dashboard
         with tab1:
@@ -366,3 +369,39 @@ if mode == "Dashboard":
                 "Top 0.5% Rate": "{:.2%}",
                 "Top 1% Rate": "{:.2%}"
             }))
+        # 🧱 TAB 6: Stacking Analysis
+        with tab6:
+            st.header("🧱 Stacking Analysis: Teammate Impact on Elite Finishes")
+
+            stack_week = st.selectbox("Stack Week Filter", ["All Weeks"] + sorted(entries_df["Week"].unique()))
+            stack_tier = st.selectbox("Stack Percentile Tier", ["Top 1%", "Top 0.5%", "Top 0.1%"])
+
+            stack_df = entries_df.copy()
+            if stack_week != "All Weeks":
+                stack_df = stack_df[stack_df["Week"] == stack_week]
+
+            # Flag stacked entries
+            def detect_stack(row):
+                teams = [row[f"Team {i}"] for i in range(1, 7)]
+                return len(set(teams)) < 6  # True if any teammates exist
+
+            stack_df["Stacked"] = stack_df.apply(detect_stack, axis=1)
+
+            # Apply tier filter
+            if stack_tier == "Top 1%":
+                stack_df["Elite"] = stack_df["Top_1%"]
+            elif stack_tier == "Top 0.5%":
+                stack_df["Elite"] = stack_df["Top_0.5%"]
+            elif stack_tier == "Top 0.1%":
+                stack_df["Elite"] = stack_df["Top_0.1%"]
+
+            summary = (
+                stack_df.groupby("Stacked")[["Elite"]]
+                .agg(["count", "sum"])
+                .droplevel(0, axis=1)
+                .rename(columns={"count": "Entry Count", "sum": "Elite Hits"})
+            )
+            summary["Elite Hit Rate (%)"] = (summary["Elite Hits"] / summary["Entry Count"]) * 100
+            summary = summary.reset_index().replace({True: "Stacked", False: "Unstacked"})
+
+            st.dataframe(summary.style.format({"Elite Hit Rate (%)": "{:.2f}"}))
