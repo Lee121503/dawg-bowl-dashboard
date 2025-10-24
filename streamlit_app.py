@@ -86,6 +86,8 @@ if mode == "Dashboard":
         entries_df = pd.concat(all_weeks, ignore_index=True)
 
         position_df = pd.read_excel(uploaded_positions)
+        # Normalize column names to avoid KeyError
+        position_df.columns = position_df.columns.str.strip().str.title()
         position_map = dict(zip(position_df["Name"], position_df["Position"]))
         team_map = dict(zip(position_df["Name"], position_df["Team"]))
 
