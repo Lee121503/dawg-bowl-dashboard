@@ -219,7 +219,25 @@ if mode == "Dashboard":
 
         st.header("🔥 Heatmap: Draft Position Frequency by Round")
 
-        melted = entries_df.melt(
+        # 🔹 Dropdown filters
+        tier_option = st.selectbox("Select Percentile Tier", ["All Entries", "Top 1%", "Top 0.5%", "Top 0.1%"])
+        week_option = st.selectbox("Select Week", ["All Weeks"] + sorted(entries_df["Week"].unique()))
+
+        # 🔹 Apply filters
+        heatmap_df = entries_df.copy()
+
+        if week_option != "All Weeks":
+            heatmap_df = heatmap_df[heatmap_df["Week"] == week_option]
+
+        if tier_option == "Top 1%":
+            heatmap_df = heatmap_df[heatmap_df["Top_1%"]]
+        elif tier_option == "Top 0.5%":
+            heatmap_df = heatmap_df[heatmap_df["Top_0.5%"]]
+        elif tier_option == "Top 0.1%":
+            heatmap_df = heatmap_df[heatmap_df["Top_0.1%"]]
+
+        # 🔹 Melt and count
+        melted = heatmap_df.melt(
             value_vars=[f"Pos {i}" for i in range(1, 7)],
             var_name="Round",
             value_name="Position"
@@ -234,10 +252,12 @@ if mode == "Dashboard":
             .fillna(0)
         )
 
+        # 🔹 Plot heatmap
         fig, ax = plt.subplots(figsize=(10, 6))
         sns.heatmap(heatmap_data, annot=True, fmt=".0f", cmap="Blues", ax=ax)
-        ax.set_title("Draft Position Frequency by Round")
+        ax.set_title(f"{tier_option} — {week_option} Draft Position Frequency")
         st.pyplot(fig)
+
 
         # 🔹 Individual User Breakdown
         st.header("🔍 Individual User Draft Breakdown")
