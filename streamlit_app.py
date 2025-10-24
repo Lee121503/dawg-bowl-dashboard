@@ -222,7 +222,7 @@ if mode == "Dashboard":
 
             anchor_pos = st.selectbox("Select Round 1 Anchor Position", ["RB", "WR", "QB", "TE"])
             tier_filter = st.selectbox("Anchor Percentile Tier", ["All Entries", "Top 1%", "Top 0.5%", "Top 0.1%"])
-            week_filter = st.selectbox("Week Filter", ["All Weeks"] + sorted(entries_df["Week"].unique()))
+            week_filter = st.selectbox("Anchor Week Filter", ["All Weeks"] + sorted(entries_df["Week"].unique()))
             user_filter = st.text_input("Username Filter (optional)")
 
             anchor_df = entries_df.copy()
@@ -317,7 +317,7 @@ if mode == "Dashboard":
 
             round_filter = st.selectbox("Filter by Draft Round", ["All Rounds"] + [f"Player {i}" for i in range(1, 7)])
             tier_filter = st.selectbox("Player Percentile Tier", ["All Entries", "Top 1%", "Top 0.5%", "Top 0.1%"])
-            week_filter = st.selectbox("Week Filter", ["All Weeks"] + sorted(entries_df["Week"].unique()))
+            week_filter = st.selectbox("Player Week Filter", ["All Weeks"] + sorted(entries_df["Week"].unique()))
 
             player_df = entries_df.copy()
             if week_filter != "All Weeks":
