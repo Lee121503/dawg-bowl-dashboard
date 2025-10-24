@@ -24,14 +24,14 @@ if mode == "Dashboard":
             df["Week"] = f"Week {week_label}"
             all_weeks.append(df)
         entries_df = pd.concat(all_weeks, ignore_index=True)
-# 🔹 Week Filter Setup
-week_options = ["All Weeks"] + sorted(entries_df["Week"].unique())
-selected_week = st.sidebar.selectbox("Filter by Week", week_options)
+        # 🔹 Week Filter Setup
+        week_options = ["All Weeks"] + sorted(entries_df["Week"].unique())
+        selected_week = st.sidebar.selectbox("Filter by Week", week_options)
 
-# 🔹 Apply Week Filter
-filtered_df = entries_df.copy()
-if selected_week != "All Weeks":
-    filtered_df = filtered_df[filtered_df["Week"] == selected_week]
+        # 🔹 Apply Week Filter
+        filtered_df = entries_df.copy()
+        if selected_week != "All Weeks":
+            filtered_df = filtered_df[filtered_df["Week"] == selected_week]
 
 
         # 🔹 Load Position List
