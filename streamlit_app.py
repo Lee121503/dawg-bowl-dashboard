@@ -133,7 +133,7 @@ if mode == "Dashboard":
         entries_df = tag_percentile_tiers(entries_df)
 
         # 🔹 Tabs
-        tab1, tab2, tab3 = st.tabs(["📊 Dashboard", "🔥 Heatmap", "🧠 Round 1 Anchor Analysis"])
+        tab1, tab2, tab3, tab4, tab5 = st.tabs(["📊 Dashboard", "🔥 Heatmap", "🧠 Round 1 Anchor Analysis", "🔗 Player Combos", "🏅 Player Elite Rates"])
 
         # 📊 TAB 1: User-Level Dashboard
         with tab1:
@@ -270,3 +270,97 @@ if mode == "Dashboard":
             ax.grid(axis="y")
             st.pyplot(fig)
         
+
+        # 🔗 TAB 4: High-Impact Player Combos
+        with tab4:
+            st.header("🔗 High-Impact Player Combos")
+
+            week_combo = st.selectbox("Week Filter", ["All Weeks"] + sorted(entries_df["Week"].unique()))
+            tier_combo = st.selectbox("Percentile Tier", ["Top 1%", "Top 0.5%", "Top 0.1%"])
+
+            combo_df = entries_df.copy()
+            if week_combo != "All Weeks":
+                combo_df = combo_df[combo_df["Week"] == week_combo]
+            if tier_combo == "Top 1%":
+                top_df = combo_df[combo_df["Top_1%"]]
+            elif tier_combo == "Top 0.5%":
+                top_df = combo_df[combo_df["Top_0.5%"]]
+            elif tier_combo == "Top 0.1%":
+                top_df = combo_df[combo_df["Top_0.1%"]]
+
+            combo_records = []
+            for _, row in top_df.iterrows():
+                players = [row[f"Player {i}"] for i in range(1, 7)]
+                for pair in combinations(sorted(players), 2):
+                    combo_records.append(tuple(pair))
+            top_combo_counts = pd.Series(combo_records).value_counts().rename("Top Tier")
+
+            combo_records_all = []
+            for _, row in combo_df.iterrows():
+                players = [row[f"Player {i}"] for i in range(1, 7)]
+                for pair in combinations(sorted(players), 2):
+                    combo_records_all.append(tuple(pair))
+            all_combo_counts = pd.Series(combo_records_all).value_counts().rename("All Entries")
+
+            combo_table = pd.concat([top_combo_counts, all_combo_counts], axis=1).fillna(0)
+            combo_table["Elite Hit Rate (%)"] = (combo_table["Top Tier"] / combo_table["All Entries"]) * 100
+            combo_table = combo_table.reset_index().rename(columns={"index": "Combo"})
+            combo_table[["Player A", "Player B"]] = pd.DataFrame(combo_table["Combo"].tolist(), index=combo_table.index)
+            combo_table = combo_table[["Player A", "Player B", "Top Tier", "All Entries", "Elite Hit Rate (%)"]]
+            combo_table = combo_table.sort_values("Elite Hit Rate (%)", ascending=False)
+
+            st.dataframe(combo_table.style.format({"Elite Hit Rate (%)": "{:.2f}"}))
+
+        # 🏅 TAB 5: Player-Level Elite Finish Rates
+        with tab5:
+            st.header("🏅 Player-Level Elite Finish Rates")
+
+            round_filter = st.selectbox("Filter by Draft Round", ["All Rounds"] + [f"Player {i}" for i in range(1, 7)])
+            tier_filter = st.selectbox("Percentile Tier", ["All Entries", "Top 1%", "Top 0.5%", "Top 0.1%"])
+            week_filter = st.selectbox("Week Filter", ["All Weeks"] + sorted(entries_df["Week"].unique()))
+
+            player_df = entries_df.copy()
+            if week_filter != "All Weeks":
+                player_df = player_df[player_df["Week"] == week_filter]
+            if tier_filter == "Top 1%":
+                player_df = player_df[player_df["Top_1%"]]
+            elif tier_filter == "Top 0.5%":
+                player_df = player_df[player_df["Top_0.5%"]]
+            elif tier_filter == "Top 0.1%":
+                player_df = player_df[player_df["Top_0.1%"]]
+
+            player_records = []
+            for _, row in player_df.iterrows():
+                for i in range(1, 7):
+                    player = row[f"Player {i}"]
+                    round_slot = f"Player {i}"
+                    player_records.append({
+                        "Player": player,
+                        "Round": round_slot,
+                        "Top_0.1%": row["Top_0.1%"],
+                        "Top_0.5%": row["Top_0.5%"],
+                        "Top_1%": row["Top_1%"]
+                    })
+
+            player_stats = pd.DataFrame(player_records)
+            if round_filter != "All Rounds":
+                player_stats = player_stats[player_stats["Round"] == round_filter]
+        
+            summary = (
+                player_stats.groupby("Player")[["Top_0.1%", "Top_0.5%", "Top_1%"]]
+                .sum()
+                .astype(int)
+                .join(player_stats["Player"].value_counts().rename("Total Appearances"))
+            )
+        
+            summary["Top 0.1% Rate"] = summary["Top_0.1%"] / summary["Total Appearances"]
+            summary["Top 0.5% Rate"] = summary["Top_0.5%"] / summary["Total Appearances"]
+            summary["Top 1% Rate"] = summary["Top_1%"] / summary["Total Appearances"]
+        
+            summary = summary.sort_values("Top 1% Rate", ascending=False)
+        
+            st.dataframe(summary.style.format({
+                "Top 0.1% Rate": "{:.2%}",
+                "Top 0.5% Rate": "{:.2%}",
+                "Top 1% Rate": "{:.2%}"
+            }))
