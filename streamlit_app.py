@@ -352,7 +352,9 @@ if mode == "Dashboard":
                 .astype(int)
                 .join(player_stats["Player"].value_counts().rename("Total Appearances"))
             )
-        
+            min_appearances = st.slider("Minimum Times Drafted", 0, int(summary["Total Appearances"].max()), 0)
+            summary = summary[summary["Total Appearances"] >= min_appearances]
+
             summary["Top 0.1% Rate"] = summary["Top_0.1%"] / summary["Total Appearances"]
             summary["Top 0.5% Rate"] = summary["Top_0.5%"] / summary["Total Appearances"]
             summary["Top 1% Rate"] = summary["Top_1%"] / summary["Total Appearances"]
