@@ -159,64 +159,55 @@ if mode == "Dashboard":
             else:
                 st.warning("No entries found for that username.")
 
-# 🔹 Trait Scanner Function
 def run_trait_scanner(uploaded_files):
-    st.title("🏆 Top 1% Draft Trait Scanner")
+    st.title("🏆 Top 1% Draft Trait Scanner (By Week)")
 
     if not uploaded_files:
         st.info("📥 Please upload contest CSVs in the Dashboard tab first.")
         return
 
-    # 🔹 Load and combine contest entries
-    all_entries = []
     for file in uploaded_files:
         try:
             df = pd.read_csv(file)
-            df["Week"] = file.name.split("_Week_")[1].split("_")[0]
-            all_entries.append(df)
+            week_label = file.name.split("_Week_")[1].split("_")[0]
         except Exception as e:
             st.error(f"Error reading {file.name}: {e}")
-            return
+            continue
 
-    full_df = pd.concat(all_entries, ignore_index=True)
+        total_entries = len(df)
+        top_cutoff = max(1, int(total_entries * 0.01))
+        top_df = df.nsmallest(top_cutoff, "place")
 
-    # 🔍 Identify top 1% entries
-    total_entries = len(full_df)
-    top_cutoff = max(1, int(total_entries * 0.01))
-    top_df = full_df.nsmallest(top_cutoff, "place")
+        st.subheader(f"📅 Week {week_label}")
+        st.markdown(f"**Total Entries:** {total_entries}  \n**Top 1% Cutoff:** Top {top_cutoff} entries")
 
-    st.markdown(f"**Total Entries:** {total_entries}  \n**Top 1% Cutoff:** Top {top_cutoff} entries")
+        all_players = pd.melt(
+            df,
+            id_vars=["place"],
+            value_vars=[f"Player {i}" for i in range(1, 7)],
+            var_name="Slot",
+            value_name="Player"
+        )
+        top_players = pd.melt(
+            top_df,
+            id_vars=["place"],
+            value_vars=[f"Player {i}" for i in range(1, 7)],
+            var_name="Slot",
+            value_name="Player"
+        )
 
-    # 📊 Count player appearances
-    all_players = pd.melt(
-        full_df,
-        id_vars=["place"],
-        value_vars=[f"Player {i}" for i in range(1, 7)],
-        var_name="Slot",
-        value_name="Player"
-    )
-    top_players = pd.melt(
-        top_df,
-        id_vars=["place"],
-        value_vars=[f"Player {i}" for i in range(1, 7)],
-        var_name="Slot",
-        value_name="Player"
-    )
+        player_counts = all_players["Player"].value_counts().rename("All Entries")
+        top_counts = top_players["Player"].value_counts().rename("Top 1%")
 
-    player_counts = all_players["Player"].value_counts().rename("All Entries")
-    top_counts = top_players["Player"].value_counts().rename("Top 1%")
+        trait_df = pd.concat([top_counts, player_counts], axis=1).fillna(0)
+        trait_df["Elite Hit Rate (%)"] = (trait_df["Top 1%"] / trait_df["All Entries"]) * 100
+        trait_df = trait_df.sort_values("Elite Hit Rate (%)", ascending=False)
 
-    trait_df = pd.concat([top_counts, player_counts], axis=1).fillna(0)
-    trait_df["Elite Hit Rate (%)"] = (trait_df["Top 1%"] / trait_df["All Entries"]) * 100
-    trait_df = trait_df.sort_values("Elite Hit Rate (%)", ascending=False)
+        st.dataframe(trait_df.style.format({"Elite Hit Rate (%)": "{:.2f}"}))
 
-    # 📈 Display results
-    st.subheader("🔥 Players with Highest Top 1% Hit Rate")
-    st.dataframe(trait_df.style.format({"Elite Hit Rate (%)": "{:.2f}"}))
-
-    # 🧠 Combo detection placeholder
     st.subheader("🔗 High-Impact Player Combos (Coming Soon)")
     st.markdown("Want to detect elite stacks or synergistic pairings? I’ll help you build that next.")
+
 
 # 🔹 Trait Scanner Mode Trigger
 if mode == "Elite Trait Scanner":
