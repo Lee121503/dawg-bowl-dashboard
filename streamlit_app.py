@@ -214,6 +214,31 @@ if mode == "Dashboard":
         plot_tier("Top_0.5%")
         plot_tier("Top_1%")
 
+        # 🔥 Heatmap: Draft Position Frequency by Round
+        import seaborn as sns
+
+        st.header("🔥 Heatmap: Draft Position Frequency by Round")
+
+        melted = entries_df.melt(
+            value_vars=[f"Pos {i}" for i in range(1, 7)],
+            var_name="Round",
+            value_name="Position"
+        )
+        melted["Round"] = melted["Round"].str.extract(r"(\d)").astype(int)
+
+        heatmap_data = (
+            melted.groupby(["Round", "Position"])
+            .size()
+            .reset_index(name="Count")
+            .pivot(index="Round", columns="Position", values="Count")
+            .fillna(0)
+        )
+
+        fig, ax = plt.subplots(figsize=(10, 6))
+        sns.heatmap(heatmap_data, annot=True, fmt=".0f", cmap="Blues", ax=ax)
+        ax.set_title("Draft Position Frequency by Round")
+        st.pyplot(fig)
+
         # 🔹 Individual User Breakdown
         st.header("🔍 Individual User Draft Breakdown")
         user_input = st.text_input("Enter username for breakdown")
