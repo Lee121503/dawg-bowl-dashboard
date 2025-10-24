@@ -7,13 +7,13 @@ st.set_page_config(page_title="Dawg Bowl Contest Dashboard", layout="wide")
 # 🔀 Sidebar mode selector
 mode = st.sidebar.selectbox("Choose Mode", ["Dashboard", "Elite Trait Scanner"])
 
+# 🔹 Upload Files (shared across modes)
+st.sidebar.header("📥 Upload Contest Files")
+uploaded_weeks = st.sidebar.file_uploader("Upload weekly CSVs", type="csv", accept_multiple_files=True)
+uploaded_positions = st.sidebar.file_uploader("Upload Position List Excel", type=["xls", "xlsx"])
+
 # 🔹 Dashboard Mode
 if mode == "Dashboard":
-
-    # 🔹 Upload Files
-    st.sidebar.header("📥 Upload Contest Files")
-    uploaded_weeks = st.sidebar.file_uploader("Upload weekly CSVs", type="csv", accept_multiple_files=True)
-    uploaded_positions = st.sidebar.file_uploader("Upload Position List Excel", type=["xls", "xlsx"])
 
     if uploaded_weeks and uploaded_positions:
         # 🔹 Load Contest Entries
@@ -158,31 +158,26 @@ if mode == "Dashboard":
                 ]].sort_values(by=["Week", "place"]))
             else:
                 st.warning("No entries found for that username.")
-        elif mode == "Elite Trait Scanner":
-            run_trait_scanner()
 
-def run_trait_scanner():
+# 🔹 Trait Scanner Function
+def run_trait_scanner(uploaded_files):
     st.title("🏆 Top 1% Draft Trait Scanner")
 
-    st.write("Trait scanner loaded. Waiting for CSV upload...")  # Debug line
-
-    # 🔹 Upload contest CSVs
-    uploaded_files = st.file_uploader(
-        "Upload one or more 2025_UD_Week_X_DBQ.csv files",
-        type="csv",
-        accept_multiple_files=True
-    )
-
     if not uploaded_files:
-        st.info("📥 Please upload at least one contest CSV to begin.")
+        st.info("📥 Please upload contest CSVs in the Dashboard tab first.")
         return
 
-    # 🔹 Process uploaded files
+    # 🔹 Load and combine contest entries
     all_entries = []
     for file in uploaded_files:
-        df = pd.read_csv(file)
-        df["Week"] = file.name.split("_Week_")[1].split("_")[0]
-        all_entries.append(df)
+        try:
+            df = pd.read_csv(file)
+            df["Week"] = file.name.split("_Week_")[1].split("_")[0]
+            all_entries.append(df)
+        except Exception as e:
+            st.error(f"Error reading {file.name}: {e}")
+            return
+
     full_df = pd.concat(all_entries, ignore_index=True)
 
     # 🔍 Identify top 1% entries
@@ -193,10 +188,20 @@ def run_trait_scanner():
     st.markdown(f"**Total Entries:** {total_entries}  \n**Top 1% Cutoff:** Top {top_cutoff} entries")
 
     # 📊 Count player appearances
-    all_players = pd.melt(full_df, id_vars=["place"], value_vars=[f"Player {i}" for i in range(1, 7)],
-                          var_name="Slot", value_name="Player")
-    top_players = pd.melt(top_df, id_vars=["place"], value_vars=[f"Player {i}" for i in range(1, 7)],
-                          var_name="Slot", value_name="Player")
+    all_players = pd.melt(
+        full_df,
+        id_vars=["place"],
+        value_vars=[f"Player {i}" for i in range(1, 7)],
+        var_name="Slot",
+        value_name="Player"
+    )
+    top_players = pd.melt(
+        top_df,
+        id_vars=["place"],
+        value_vars=[f"Player {i}" for i in range(1, 7)],
+        var_name="Slot",
+        value_name="Player"
+    )
 
     player_counts = all_players["Player"].value_counts().rename("All Entries")
     top_counts = top_players["Player"].value_counts().rename("Top 1%")
@@ -205,9 +210,14 @@ def run_trait_scanner():
     trait_df["Elite Hit Rate (%)"] = (trait_df["Top 1%"] / trait_df["All Entries"]) * 100
     trait_df = trait_df.sort_values("Elite Hit Rate (%)", ascending=False)
 
+    # 📈 Display results
     st.subheader("🔥 Players with Highest Top 1% Hit Rate")
     st.dataframe(trait_df.style.format({"Elite Hit Rate (%)": "{:.2f}"}))
 
     # 🧠 Combo detection placeholder
     st.subheader("🔗 High-Impact Player Combos (Coming Soon)")
     st.markdown("Want to detect elite stacks or synergistic pairings? I’ll help you build that next.")
+
+# 🔹 Trait Scanner Mode Trigger
+elif mode == "Elite Trait Scanner":
+    run_trait_scanner(uploaded_weeks)
