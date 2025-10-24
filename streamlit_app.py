@@ -220,8 +220,8 @@ if mode == "Dashboard":
         st.header("🔥 Heatmap: Draft Position Frequency by Round")
 
         # 🔹 Dropdown filters
-        tier_option = st.selectbox("Select Percentile Tier", ["All Entries", "Top 1%", "Top 0.5%", "Top 0.1%"])
-        week_option = st.selectbox("Select Week", ["All Weeks"] + sorted(entries_df["Week"].unique()))
+        tier_option = st.selectbox("Heatmap Percentile Tier", ["All Entries", "Top 1%", "Top 0.5%", "Top 0.1%"])
+        week_option = st.selectbox("Heatmap Week Filter", ["All Weeks"] + sorted(entries_df["Week"].unique()))
 
         # 🔹 Apply filters
         heatmap_df = entries_df.copy()
