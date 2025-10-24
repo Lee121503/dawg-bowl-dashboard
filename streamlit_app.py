@@ -138,7 +138,7 @@ if mode == "Dashboard":
         entries_df = tag_percentile_tiers(entries_df)
 
         # 🔹 Tabs
-        tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs(["📊 Dashboard", "🔥 Heatmap", "🧠 Round 1 Anchor Analysis", "🔗 Player Combos", "🏅 Player Elite Rates", "🧱 Stacking Analysis"])
+        tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs(["📊 Dashboard", "🔥 Heatmap", "🧠 Round 1 Anchor Analysis", "🔗 Player Combos", "🏅 Player Elite Rates", "🧱 Stacking Analysis", "🧠 Stacking Combinations"])
 
         # 📊 TAB 1: User-Level Dashboard
         with tab1:
@@ -407,3 +407,59 @@ if mode == "Dashboard":
             summary = summary.reset_index().replace({True: "Stacked", False: "Unstacked"})
 
             st.dataframe(summary.style.format({"Elite Hit Rate (%)": "{:.2f}"}))
+
+        with tab7:
+            st.header("🧠 Stacking Combinations: QB + Teammates vs Mini Stacks")
+
+            stack_week = st.selectbox("Stack Week Filter", ["All Weeks"] + sorted(entries_df["Week"].unique()))
+            stack_tier = st.selectbox("Stack Percentile Tier", ["Top 1%", "Top 0.5%", "Top 0.1%"])
+
+            df = entries_df.copy()
+            if stack_week != "All Weeks":
+                df = df[df["Week"] == stack_week]
+
+            # Apply tier filter
+            if stack_tier == "Top 1%":
+                df["Elite"] = df["Top_1%"]
+            elif stack_tier == "Top 0.5%":
+                df["Elite"] = df["Top_0.5%"]
+            elif stack_tier == "Top 0.1%":
+                df["Elite"] = df["Top_0.1%"]
+
+            def classify_stack(row):
+                teams = [row[f"Team {i}"] for i in range(1, 7)]
+                positions = [row[f"Pos {i}"] for i in range(1, 7)]
+                team_counts = pd.Series(teams).value_counts()
+                has_qb_stack = False
+                has_mini_stack = False
+                for team, count in team_counts.items():
+                    if count >= 2:
+                        qbs = [i for i in range(6) if teams[i] == team and positions[i] == "QB"]
+                        if qbs:
+                            has_qb_stack = True
+                        else:
+                            has_mini_stack = True
+                if has_qb_stack:
+                    return "QB Stack"
+                elif has_mini_stack:
+                    return "Mini Stack"
+                else:
+                    return "Unstacked"
+
+            df["Stack Type"] = df.apply(classify_stack, axis=1)
+        
+            summary = (
+                df.groupby("Stack Type")[["Elite"]]
+                .agg(["count", "sum"])
+                .droplevel(0, axis=1)
+                .rename(columns={"count": "Entry Count", "sum": "Elite Hits"})
+            )
+            summary["Elite Hit Rate (%)"] = (summary["Elite Hits"] / summary["Entry Count"]) * 100
+            summary["Stack Prevalence (%)"] = (summary["Entry Count"] / len(df)) * 100
+            summary = summary.reset_index()
+        
+            st.dataframe(summary.style.format({
+                "Elite Hit Rate (%)": "{:.2f}",
+                "Stack Prevalence (%)": "{:.2f}"
+            }))
+                
