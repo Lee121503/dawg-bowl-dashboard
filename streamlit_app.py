@@ -212,7 +212,7 @@ if mode == "Dashboard":
                 .fillna(0)
             )
 
-            fig, ax = plt.subplots(figsize=(10, 6))
+            fig, ax = plt.subplots(figsize=(8, 4.5))
             sns.heatmap(heatmap_data, annot=True, fmt=".0f", cmap="Blues", ax=ax)
             ax.set_title(f"{tier_option} — {week_option} Draft Position Frequency")
             st.pyplot(fig)
@@ -258,7 +258,7 @@ if mode == "Dashboard":
             round_percentages = round_counts.div(round_counts.sum(axis=1), axis=0) * 100
 
             # 📊 Plot with labels
-            fig, ax = plt.subplots(figsize=(10, 6))
+            fig, ax = plt.subplots(figsize=(8, 4.5))
             bars = round_percentages.plot(kind="bar", stacked=True, ax=ax, colormap="tab20")
         
             for container in ax.containers:
