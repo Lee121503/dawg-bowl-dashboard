@@ -134,41 +134,41 @@ if mode == "Dashboard":
         # 🔹 Export Button
         st.download_button("📤 Export Filtered Table", filtered.to_csv(index=False), "filtered_user_summary.csv")
 
-# 🔹 Weekly Draft Charts
-st.header("🎛️ Weekly Draft Position Charts")
-week_options = ["All Weeks"] + sorted(entries_df["Week"].unique())
-selected_week = st.selectbox("Select Week", week_options)
+        # 🔹 Weekly Draft Charts
+        st.header("🎛️ Weekly Draft Position Charts")
+        week_options = ["All Weeks"] + sorted(entries_df["Week"].unique())
+        selected_week = st.selectbox("Select Week", week_options)
 
-if selected_week == "All Weeks":
-    week_df = entries_df.copy()
-    title_prefix = "All Weeks"
-else:
-    week_df = entries_df[entries_df["Week"] == selected_week].copy()
-    title_prefix = selected_week
+        if selected_week == "All Weeks":
+            week_df = entries_df.copy()
+            title_prefix = "All Weeks"
+        else:
+            week_df = entries_df[entries_df["Week"] == selected_week].copy()
+            title_prefix = selected_week
 
-melted = week_df.melt(
-    id_vars=["place", "Top_0.1%", "Top_0.5%", "Top_1%"],
-    value_vars=[f"Pos {i}" for i in range(1, 7)],
-    var_name="Round",
-    value_name="Position"
-)
-melted["Round"] = melted["Round"].str.extract(r"(\d)").astype(int)
+        melted = week_df.melt(
+            id_vars=["place", "Top_0.1%", "Top_0.5%", "Top_1%"],
+            value_vars=[f"Pos {i}" for i in range(1, 7)],
+            var_name="Round",
+            value_name="Position"
+        )
+        melted["Round"] = melted["Round"].str.extract(r"(\d)").astype(int)
 
-def plot_tier(tier_label):
-    tier_df = melted[melted[tier_label]]
-    count_df = tier_df.groupby(["Round", "Position"]).size().reset_index(name="Count")
-    pivot_df = count_df.pivot(index="Round", columns="Position", values="Count").fillna(0)
-    fig, ax = plt.subplots(figsize=(10, 6))
-    pivot_df.plot(kind="bar", stacked=False, ax=ax)
-    ax.set_title(f"{title_prefix} — {tier_label} Draft Position Frequency")
-    ax.set_xlabel("Draft Round")
-    ax.set_ylabel("Count")
-    ax.grid(axis="y")
-    st.pyplot(fig)
+        def plot_tier(tier_label):
+            tier_df = melted[melted[tier_label]]
+            count_df = tier_df.groupby(["Round", "Position"]).size().reset_index(name="Count")
+            pivot_df = count_df.pivot(index="Round", columns="Position", values="Count").fillna(0)
+            fig, ax = plt.subplots(figsize=(10, 6))
+            pivot_df.plot(kind="bar", stacked=False, ax=ax)
+            ax.set_title(f"{title_prefix} — {tier_label} Draft Position Frequency")
+            ax.set_xlabel("Draft Round")
+            ax.set_ylabel("Count")
+            ax.grid(axis="y")
+            st.pyplot(fig)
 
-plot_tier("Top_0.1%")
-plot_tier("Top_0.5%")
-plot_tier("Top_1%")
+        plot_tier("Top_0.1%")
+        plot_tier("Top_0.5%")
+        plot_tier("Top_1%")
 
 # 🔹 Individual User Breakdown
 st.header("🔍 Individual User Draft Breakdown")
