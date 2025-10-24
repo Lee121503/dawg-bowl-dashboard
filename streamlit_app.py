@@ -88,11 +88,11 @@ if mode == "Dashboard":
         if selected_week != "All Weeks":
             filtered_df = filtered_df[filtered_df["Week"] == selected_week]
 
-# 🔹 Sidebar Filters
-st.sidebar.header("🔍 Filter Users")
-selected_user = st.sidebar.text_input("Username (optional)")
-min_entries = st.sidebar.slider("Minimum Entries", 0, int(entries_df["Total Entries"].max()), 0)
-sort_mode = st.sidebar.radio("Sort by", ["Elite Finish Count", "Elite Finish Rate"])
+        # 🔹 Sidebar Filters
+        st.sidebar.header("🔍 Filter Users")
+        selected_user = st.sidebar.text_input("Username (optional)")
+        min_entries = st.sidebar.slider("Minimum Entries", 0, int(entries_df["Total Entries"].max()), 0)
+        sort_mode = st.sidebar.radio("Sort by", ["Elite Finish Count", "Elite Finish Rate"])
 
 # 🔹 Overall User Summary
 st.header("📊 User-Level Elite Finish Dashboard")
