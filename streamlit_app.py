@@ -166,13 +166,13 @@ if mode == "Dashboard":
                 filtered = filtered[filtered["username"].str.lower() == selected_user.lower()]
 
             sort_cols = ["Top_0.1%", "Top_0.5%", "Top_1%"] if sort_mode == "Elite Finish Count" else ["Top 0.1% Rate", "Top 0.5% Rate", "Top 1% Rate"]
-                        st.dataframe(
-                filtered.sort_values(by=sort_cols, ascending=False)
-                .style.format({
-                    "Top 0.1% Rate": "{:.2%}",
-                    "Top 0.5% Rate": "{:.2%}",
-                    "Top 1% Rate": "{:.2%}"
-                })
+                st.dataframe(
+                    filtered.sort_values(by=sort_cols, ascending=False)
+                    .style.format({
+                        "Top 0.1% Rate": "{:.2%}",
+                        "Top 0.5% Rate": "{:.2%}",
+                        "Top 1% Rate": "{:.2%}"
+                    })
             )
 
             st.download_button("📤 Export Filtered Table", filtered.to_csv(index=False), "filtered_user_summary.csv")
