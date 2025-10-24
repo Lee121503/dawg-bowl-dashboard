@@ -462,4 +462,54 @@ if mode == "Dashboard":
                 "Elite Hit Rate (%)": "{:.2f}",
                 "Stack Prevalence (%)": "{:.2f}"
             }))
-                
+            
+            st.subheader("🔗 Player-Level Stack Combinations")
+
+            combo_records = []
+            for _, row in df.iterrows():
+                players = [row[f"Player {i}"] for i in range(1, 7)]
+                teams = [row[f"Team {i}"] for i in range(1, 7)]
+                positions = [row[f"Pos {i}"] for i in range(1, 7)]
+                for i in range(6):
+                    for j in range(i + 1, 6):
+                        if teams[i] == teams[j] and teams[i] != "Unknown":
+                            combo_type = "QB Stack" if "QB" in [positions[i], positions[j]] else "Mini Stack"
+                            combo_records.append({
+                                "Player A": players[i],
+                                "Player B": players[j],
+                                "Combo Type": combo_type,
+                                "Elite_1%": row["Top_1%"],
+                                "Elite_0.5%": row["Top_0.5%"],
+                                "Elite_0.1%": row["Top_0.1%"]
+                            })
+
+            combo_df = pd.DataFrame(combo_records)
+            combo_df["Combo"] = combo_df.apply(lambda x: tuple(sorted([x["Player A"], x["Player B"]])), axis=1)
+            
+            summary = (
+                combo_df.groupby(["Combo", "Combo Type"])[["Elite_1%", "Elite_0.5%", "Elite_0.1%"]]
+                .sum()
+                .astype(int)
+                .join(combo_df["Combo"].value_counts().rename("Total Entries"))
+                .reset_index()
+            )
+            
+            summary[["Player A", "Player B"]] = pd.DataFrame(summary["Combo"].tolist(), index=summary.index)
+            summary["Top 1% Rate"] = summary["Elite_1%"] / summary["Total Entries"]
+            summary["Top 0.5% Rate"] = summary["Elite_0.5%"] / summary["Total Entries"]
+            summary["Top 0.1% Rate"] = summary["Elite_0.1%"] / summary["Total Entries"]
+            
+            summary = summary[[
+                "Player A", "Player B", "Combo Type", "Total Entries",
+                "Elite_1%", "Elite_0.5%", "Elite_0.1%",
+                "Top 1% Rate", "Top 0.5% Rate", "Top 0.1% Rate"
+            ]].sort_values("Top 1% Rate", ascending=False)
+            
+            st.dataframe(summary.style.format({
+                "Top 1% Rate": "{:.2%}",
+                "Top 0.5% Rate": "{:.2%}",
+                "Top 0.1% Rate": "{:.2%}"
+            }))
+            
+                            
+            
