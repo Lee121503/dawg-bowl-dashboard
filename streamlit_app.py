@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
+import seaborn as sns
 from itertools import combinations
 
 st.set_page_config(page_title="Dawg Bowl Contest Dashboard", layout="wide")
@@ -13,7 +14,7 @@ st.sidebar.header("📥 Upload Contest Files")
 uploaded_weeks = st.sidebar.file_uploader("Upload weekly CSVs", type="csv", accept_multiple_files=True)
 uploaded_positions = st.sidebar.file_uploader("Upload Position List Excel", type=["xls", "xlsx"])
 
-# 🔹 Trait Scanner Function (must be defined outside Dashboard block)
+# 🔹 Trait Scanner Function
 def run_trait_scanner(uploaded_files):
     st.title("🏆 Top 1% Draft Trait Scanner (By Week)")
     if not uploaded_files:
@@ -75,6 +76,7 @@ def run_trait_scanner(uploaded_files):
 # 🔹 Dashboard Mode
 if mode == "Dashboard":
     if uploaded_weeks and uploaded_positions:
+        # 🔹 Load and process data
         all_weeks = []
         for file in uploaded_weeks:
             week_label = file.name.split("_Week_")[1].split("_")[0]
@@ -130,157 +132,133 @@ if mode == "Dashboard":
 
         entries_df = tag_percentile_tiers(entries_df)
 
-        week_options = ["All Weeks"] + sorted(entries_df["Week"].unique())
-        selected_week = st.sidebar.selectbox("Filter by Week", week_options)
-        filtered_df = entries_df.copy()
-        if selected_week != "All Weeks":
-            filtered_df = filtered_df[filtered_df["Week"] == selected_week]
+        # 🔹 Tabs
+        tab1, tab2, tab3 = st.tabs(["📊 Dashboard", "🔥 Heatmap", "🧠 Round 1 Anchor Analysis"])
 
-        st.sidebar.header("🔍 Filter Users")
-        selected_user = st.sidebar.text_input("Username (optional)")
-        min_entries = st.sidebar.slider("Minimum Entries", 0, int(entries_df["Total Entries"].max()), 0)
-        sort_mode = st.sidebar.radio("Sort by", ["Elite Finish Count", "Elite Finish Rate"])
+        # 📊 TAB 1: User-Level Dashboard
+        with tab1:
+            st.header("📊 User-Level Elite Finish Dashboard")
 
-        st.header("📊 User-Level Elite Finish Dashboard")
-        user_summary = (
-            filtered_df.groupby("username")[["Top_0.1%", "Top_0.5%", "Top_1%"]]
-            .sum()
-            .astype(int)
-            .join(filtered_df["username"].value_counts().rename("Total Entries"))
-            .reset_index()
-            .rename(columns={"index": "username"})
-        )
+            selected_week = st.selectbox("Filter by Week", ["All Weeks"] + sorted(entries_df["Week"].unique()))
+            filtered_df = entries_df.copy()
+            if selected_week != "All Weeks":
+                filtered_df = filtered_df[filtered_df["Week"] == selected_week]
 
-        user_summary["Top 0.1% Rate"] = user_summary["Top_0.1%"] / user_summary["Total Entries"]
-        user_summary["Top 0.5% Rate"] = user_summary["Top_0.5%"] / user_summary["Total Entries"]
-        user_summary["Top 1% Rate"] = user_summary["Top_1%"] / user_summary["Total Entries"]
+            selected_user = st.text_input("Username (optional)")
+            min_entries = st.slider("Minimum Entries", 0, int(entries_df["Total Entries"].max()), 0)
+            sort_mode = st.radio("Sort by", ["Elite Finish Count", "Elite Finish Rate"])
 
-        # 🔹 Apply filters
-        filtered = user_summary[user_summary["Total Entries"] >= min_entries]
-        if selected_user:
-            filtered = filtered[filtered["username"].str.lower() == selected_user.lower()]
+            user_summary = (
+                filtered_df.groupby("username")[["Top_0.1%", "Top_0.5%", "Top_1%"]]
+                .sum()
+                .astype(int)
+                .join(filtered_df["username"].value_counts().rename("Total Entries"))
+                .reset_index()
+                .rename(columns={"index": "username"})
+            )
 
-        # 🔹 Display with formatting
-        if sort_mode == "Elite Finish Count":
-            sort_cols = ["Top_0.1%", "Top_0.5%", "Top_1%"]
-        else:
-            sort_cols = ["Top 0.1% Rate", "Top 0.5% Rate", "Top 1% Rate"]
+            user_summary["Top 0.1% Rate"] = user_summary["Top_0.1%"] / user_summary["Total Entries"]
+            user_summary["Top 0.5% Rate"] = user_summary["Top_0.5%"] / user_summary["Total Entries"]
+            user_summary["Top 1% Rate"] = user_summary["Top_1%"] / user_summary["Total Entries"]
 
-        st.dataframe(
-            filtered.sort_values(by=sort_cols, ascending=False)
-            .style.format({
-                "Top 0.1% Rate": "{:.2%}",
-                "Top 0.5% Rate": "{:.2%}",
-                "Top 1% Rate": "{:.2%}"
-            })
-        )
+            filtered = user_summary[user_summary["Total Entries"] >= min_entries]
+            if selected_user:
+                filtered = filtered[filtered["username"].str.lower() == selected_user.lower()]
 
-        # 🔹 Export Button
-        st.download_button("📤 Export Filtered Table", filtered.to_csv(index=False), "filtered_user_summary.csv")
+            sort_cols = ["Top_0.1%", "Top_0.5%", "Top_1%"] if sort_mode == "Elite Finish Count" else ["Top 0.1% Rate", "Top 0.5% Rate", "Top 1% Rate"]
+                        st.dataframe(
+                filtered.sort_values(by=sort_cols, ascending=False)
+                .style.format({
+                    "Top 0.1% Rate": "{:.2%}",
+                    "Top 0.5% Rate": "{:.2%}",
+                    "Top 1% Rate": "{:.2%}"
+                })
+            )
 
-        # 🔹 Weekly Draft Charts
-        st.header("🎛️ Weekly Draft Position Charts")
-        week_options = ["All Weeks"] + sorted(entries_df["Week"].unique())
-        selected_week = st.selectbox("Select Week", week_options)
+            st.download_button("📤 Export Filtered Table", filtered.to_csv(index=False), "filtered_user_summary.csv")
 
-        if selected_week == "All Weeks":
-            week_df = entries_df.copy()
-            title_prefix = "All Weeks"
-        else:
-            week_df = entries_df[entries_df["Week"] == selected_week].copy()
-            title_prefix = selected_week
+# 🔥 TAB 2: Heatmap
+with tab2:
+    st.header("🔥 Heatmap: Draft Position Frequency by Round")
 
-        melted = week_df.melt(
-            id_vars=["place", "Top_0.1%", "Top_0.5%", "Top_1%"],
-            value_vars=[f"Pos {i}" for i in range(1, 7)],
-            var_name="Round",
-            value_name="Position"
-        )
-        melted["Round"] = melted["Round"].str.extract(r"(\d)").astype(int)
+    tier_option = st.selectbox("Heatmap Percentile Tier", ["All Entries", "Top 1%", "Top 0.5%", "Top 0.1%"])
+    week_option = st.selectbox("Heatmap Week Filter", ["All Weeks"] + sorted(entries_df["Week"].unique()))
+    heatmap_user = st.text_input("Heatmap Username Filter (optional)")
 
-        def plot_tier(tier_label):
-            tier_df = melted[melted[tier_label]]
-            count_df = tier_df.groupby(["Round", "Position"]).size().reset_index(name="Count")
-            pivot_df = count_df.pivot(index="Round", columns="Position", values="Count").fillna(0)
-            fig, ax = plt.subplots(figsize=(10, 6))
-            pivot_df.plot(kind="bar", stacked=False, ax=ax)
-            ax.set_title(f"{title_prefix} — {tier_label} Draft Position Frequency")
-            ax.set_xlabel("Draft Round")
-            ax.set_ylabel("Count")
-            ax.grid(axis="y")
-            st.pyplot(fig)
+    heatmap_df = entries_df.copy()
+    if week_option != "All Weeks":
+        heatmap_df = heatmap_df[heatmap_df["Week"] == week_option]
+    if tier_option == "Top 1%":
+        heatmap_df = heatmap_df[heatmap_df["Top_1%"]]
+    elif tier_option == "Top 0.5%":
+        heatmap_df = heatmap_df[heatmap_df["Top_0.5%"]]
+    elif tier_option == "Top 0.1%":
+        heatmap_df = heatmap_df[heatmap_df["Top_0.1%"]]
+    if heatmap_user:
+        heatmap_df = heatmap_df[heatmap_df["username"].str.lower() == heatmap_user.lower()]
 
-        plot_tier("Top_0.1%")
-        plot_tier("Top_0.5%")
-        plot_tier("Top_1%")
+    melted = heatmap_df.melt(
+        value_vars=[f"Pos {i}" for i in range(1, 7)],
+        var_name="Round",
+        value_name="Position"
+    )
+    melted["Round"] = melted["Round"].str.extract(r"(\d)").astype(int)
 
-        # 🔥 Heatmap: Draft Position Frequency by Round
-        import seaborn as sns
+    heatmap_data = (
+        melted.groupby(["Round", "Position"])
+        .size()
+        .reset_index(name="Count")
+        .pivot(index="Round", columns="Position", values="Count")
+        .fillna(0)
+    )
 
-        st.header("🔥 Heatmap: Draft Position Frequency by Round")
+    fig, ax = plt.subplots(figsize=(10, 6))
+    sns.heatmap(heatmap_data, annot=True, fmt=".0f", cmap="Blues", ax=ax)
+    ax.set_title(f"{tier_option} — {week_option} Draft Position Frequency")
+    st.pyplot(fig)
 
-        # 🔹 Dropdown filters
-        tier_option = st.selectbox("Heatmap Percentile Tier", ["All Entries", "Top 1%", "Top 0.5%", "Top 0.1%"])
-        week_option = st.selectbox("Heatmap Week Filter", ["All Weeks"] + sorted(entries_df["Week"].unique()))
-        heatmap_user = st.text_input("Heatmap Username Filter (optional)")
+# 🧠 TAB 3: Round 1 Anchor Analysis
+with tab3:
+    st.header("🧠 Round 1 Anchor Analysis")
 
-        # 🔹 Apply filters
-        heatmap_df = entries_df.copy()
+    anchor_pos = st.selectbox("Select Round 1 Anchor Position", ["RB", "WR", "QB", "TE"])
+    tier_filter = st.selectbox("Percentile Tier", ["All Entries", "Top 1%", "Top 0.5%", "Top 0.1%"])
+    week_filter = st.selectbox("Week Filter", ["All Weeks"] + sorted(entries_df["Week"].unique()))
+    user_filter = st.text_input("Username Filter (optional)")
 
-        if week_option != "All Weeks":
-            heatmap_df = heatmap_df[heatmap_df["Week"] == week_option]
+    anchor_df = entries_df.copy()
+    if week_filter != "All Weeks":
+        anchor_df = anchor_df[anchor_df["Week"] == week_filter]
+    if tier_filter == "Top 1%":
+        anchor_df = anchor_df[anchor_df["Top_1%"]]
+    elif tier_filter == "Top 0.5%":
+        anchor_df = anchor_df[anchor_df["Top_0.5%"]]
+    elif tier_filter == "Top 0.1%":
+        anchor_df = anchor_df[anchor_df["Top_0.1%"]]
+    if user_filter:
+        anchor_df = anchor_df[anchor_df["username"].str.lower() == user_filter.lower()]
 
-        if tier_option == "Top 1%":
-            heatmap_df = heatmap_df[heatmap_df["Top_1%"]]
-        elif tier_option == "Top 0.5%":
-            heatmap_df = heatmap_df[heatmap_df["Top_0.5%"]]
-        elif tier_option == "Top 0.1%":
-            heatmap_df = heatmap_df[heatmap_df["Top_0.1%"]]
+    anchor_df = anchor_df[anchor_df["Pos 1"] == anchor_pos]
 
-        if heatmap_user:
-            heatmap_df = heatmap_df[heatmap_df["username"].str.lower() == heatmap_user.lower()]
+    melted = anchor_df.melt(
+        value_vars=[f"Pos {i}" for i in range(2, 7)],
+        var_name="Round",
+        value_name="Position"
+    )
+    melted["Round"] = melted["Round"].str.extract(r"(\d)").astype(int)
 
-        # 🔹 Melt and count
-        melted = heatmap_df.melt(
-            value_vars=[f"Pos {i}" for i in range(1, 7)],
-            var_name="Round",
-            value_name="Position"
-        )
-        melted["Round"] = melted["Round"].str.extract(r"(\d)").astype(int)
+    round_counts = (
+        melted.groupby(["Round", "Position"])
+        .size()
+        .reset_index(name="Count")
+        .pivot(index="Round", columns="Position", values="Count")
+        .fillna(0)
+    )
 
-        heatmap_data = (
-            melted.groupby(["Round", "Position"])
-            .size()
-            .reset_index(name="Count")
-            .pivot(index="Round", columns="Position", values="Count")
-            .fillna(0)
-        )
-
-        # 🔹 Plot heatmap
-        fig, ax = plt.subplots(figsize=(10, 6))
-        sns.heatmap(heatmap_data, annot=True, fmt=".0f", cmap="Blues", ax=ax)
-        ax.set_title(f"{tier_option} — {week_option} Draft Position Frequency")
-        st.pyplot(fig)
-
-
-        # 🔹 Individual User Breakdown
-        st.header("🔍 Individual User Draft Breakdown")
-        user_input = st.text_input("Enter username for breakdown")
-        if user_input:
-            user_df = entries_df[entries_df["username"].str.lower() == user_input.lower()]
-            if not user_df.empty:
-                st.subheader(f"📋 Summary for {user_input}")
-                st.write(f"Total Entries: {len(user_df)}")
-                st.write(f"Average Points: {user_df['points'].mean():.2f}")
-                st.write(f"Top 0.1% Finishes: {user_df['Top_0.1%'].sum()}")
-                st.write(f"Top 0.5% Finishes: {user_df['Top_0.5%'].sum()}")
-                st.write(f"Top 1% Finishes: {user_df['Top_1%'].sum()}")
-                st.dataframe(user_df[[
-                    "Week", "place", "points",
-                    "QB Pick", "RB1 Pick", "WR1 Pick", "WR2 Pick", "TE Pick", "Flex Pick"
-                ]].sort_values(by=["Week", "place"]))
-            else:
-                st.warning("No entries found for that username.")
-# 🔹 Trait Scanner Mode Trigger
-if mode == "Elite Trait Scanner":
-    run_trait_scanner(uploaded_weeks)
+    fig, ax = plt.subplots(figsize=(10, 6))
+    round_counts.plot(kind="bar", stacked=True, ax=ax)
+    ax.set_title(f"Draft Flow After Round 1 {anchor_pos} — {tier_filter} — {week_filter}")
+    ax.set_xlabel("Draft Round")
+    ax.set_ylabel("Count")
+    ax.grid(axis="y")
+    st.pyplot(fig)
