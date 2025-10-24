@@ -221,7 +221,7 @@ if mode == "Dashboard":
             st.header("🧠 Round 1 Anchor Analysis")
 
             anchor_pos = st.selectbox("Select Round 1 Anchor Position", ["RB", "WR", "QB", "TE"])
-            tier_filter = st.selectbox("Percentile Tier", ["All Entries", "Top 1%", "Top 0.5%", "Top 0.1%"])
+            tier_filter = st.selectbox("Anchor Percentile Tier", ["All Entries", "Top 1%", "Top 0.5%", "Top 0.1%"])
             week_filter = st.selectbox("Week Filter", ["All Weeks"] + sorted(entries_df["Week"].unique()))
             user_filter = st.text_input("Username Filter (optional)")
 
