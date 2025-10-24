@@ -7,7 +7,7 @@ st.set_page_config(page_title="Dawg Bowl Contest Dashboard", layout="wide")
 # 🔀 Sidebar mode selector
 mode = st.sidebar.selectbox("Choose Mode", ["Dashboard", "Elite Trait Scanner"])
 
-# 🔹 Upload Files (shared across modes)
+# 🔹 Shared Uploads
 st.sidebar.header("📥 Upload Contest Files")
 uploaded_weeks = st.sidebar.file_uploader("Upload weekly CSVs", type="csv", accept_multiple_files=True)
 uploaded_positions = st.sidebar.file_uploader("Upload Position List Excel", type=["xls", "xlsx"])
@@ -219,5 +219,5 @@ def run_trait_scanner(uploaded_files):
     st.markdown("Want to detect elite stacks or synergistic pairings? I’ll help you build that next.")
 
 # 🔹 Trait Scanner Mode Trigger
-elif mode == "Elite Trait Scanner":
+if mode == "Elite Trait Scanner":
     run_trait_scanner(uploaded_weeks)
